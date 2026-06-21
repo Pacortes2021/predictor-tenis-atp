@@ -36,7 +36,7 @@ M = cargar()
 activos = mo.jugadores_activos(M)
 
 st.title("🎾 Predictor de Tenis ATP")
-st.markdown("<p class='mut'>Elo por superficie + validación temporal + Monte Carlo · datos ATP 2000–2024 (todas las superficies)</p>",
+st.markdown("<p class='mut'>Elo por superficie + validación temporal + Monte Carlo · datos ATP 2000 → mar-2026 (todas las superficies)</p>",
             unsafe_allow_html=True)
 
 t1, t2, t3, t4 = st.tabs(["🎾 Predecir partido", "📊 Rankings Elo", "🏆 Simulador de torneo", "🎯 El modelo"])
@@ -87,6 +87,8 @@ with t1:
         h1, h2 = (h[0], h[1]) if hk[0] == j1 else (h[1], h[0])
         st.caption(f"Head-to-head histórico (desde 2000): {j1} {h1}–{h2} {j2}")
         st.caption("La probabilidad combina Elo general + Elo de la superficie + edad + ranking ATP (modelo elegido por selección forward).")
+        st.caption("⚠️ El **Elo** es una medida propia de fuerza (no existe un Elo oficial) y **no es lo mismo que el ranking ATP**. "
+                   "El 'Ranking ATP' mostrado es el del último partido en los datos (hasta mar-2026), así que puede diferir del oficial de hoy.")
 
 # ============================ TAB 2: RANKINGS ============================
 with t2:
@@ -106,6 +108,10 @@ with t2:
     st.dataframe(rk, width='stretch', height=560)
     st.caption("El Elo de superficie revela especialistas: Nadal domina en tierra, Djokovic en pasto. "
                "Un jugador retirado conserva su último Elo (por eso el filtro 'activos').")
+    st.info("Este ranking Elo **no es el ranking ATP** y no tiene por qué coincidir. El ATP suma puntos de los "
+            "torneos de las últimas 52 semanas (premia jugar y ganar títulos, los puntos caducan). El Elo mide "
+            "fuerza predictiva ajustada por rival y no caduca por inactividad. Ej.: hoy el Elo pone a Sinner #1, "
+            "pero el ATP a Alcaraz #1 — su suspensión de 2025 le restó puntos ATP, no tanto Elo.")
 
 # ============================ TAB 3: SIMULADOR ============================
 with t3:
