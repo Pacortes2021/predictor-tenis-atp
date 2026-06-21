@@ -227,6 +227,43 @@ def ranking_elo(M, surface=None, top=30, min_partidos=20):
     return pd.DataFrame(filas).sort_values("elo", ascending=False).head(top).reset_index(drop=True)
 
 
+def ultimos_partidos(M, jugador, surface=None, n=8):
+    """Últimos n partidos de un jugador (opcionalmente solo de una superficie)."""
+    df = M["df"]
+    m = df[(df["winner_name"] == jugador) | (df["loser_name"] == jugador)]
+    if surface:
+        m = m[m["surface"] == surface]
+    m = m.sort_values("fecha", ascending=False).head(n)
+    filas = []
+    for r in m.itertuples(index=False):
+        gano = r.winner_name == jugador
+        filas.append({
+            "Fecha": r.fecha.date(), "Res": "✅" if gano else "❌",
+            "Rival": r.loser_name if gano else r.winner_name,
+            "Marcador": (r.score if isinstance(r.score, str) and r.score else "—"),
+            "Sup.": r.surface, "Torneo": r.tourney_name,
+        })
+    return pd.DataFrame(filas)
+
+
+def historial_versus(M, j1, j2, surface=None):
+    """Todos los enfrentamientos directos entre j1 y j2 (opcionalmente por superficie)."""
+    df = M["df"]
+    m = df[((df["winner_name"] == j1) & (df["loser_name"] == j2)) |
+           ((df["winner_name"] == j2) & (df["loser_name"] == j1))]
+    if surface:
+        m = m[m["surface"] == surface]
+    m = m.sort_values("fecha", ascending=False)
+    filas = []
+    for r in m.itertuples(index=False):
+        filas.append({
+            "Fecha": r.fecha.date(), "Ganador": r.winner_name,
+            "Marcador": (r.score if isinstance(r.score, str) and r.score else "—"),
+            "Sup.": r.surface, "Torneo": r.tourney_name,
+        })
+    return pd.DataFrame(filas)
+
+
 # ----------------------------- simulación Monte Carlo del cuadro -----------------------------
 def simular_torneo(M, draw, surface, n_sims=10000, seed=0):
     """draw: lista de nombres (potencia de 2, en orden del cuadro). Devuelve P(campeón) por jugador.

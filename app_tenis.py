@@ -84,13 +84,41 @@ with t1:
         <p class='mut' style='display:flex;justify-content:space-between'><span>{j1}</span><span>{j2}</span></p>""",
                     unsafe_allow_html=True)
 
-        hk = tuple(sorted((j1, j2)))
-        h = M["h2h"].get(hk, [0, 0])
-        h1, h2 = (h[0], h[1]) if hk[0] == j1 else (h[1], h[0])
-        st.caption(f"Head-to-head histórico (desde 2000): {j1} {h1}–{h2} {j2}")
         st.caption("La probabilidad combina Elo general + Elo de la superficie + edad + ranking ATP (modelo elegido por selección forward).")
         st.caption("⚠️ El **Elo** es una medida propia de fuerza (no existe un Elo oficial) y **no es lo mismo que el ranking ATP**. "
                    "El 'Ranking ATP' mostrado proviene del ranking actual de ESPN.")
+
+        # ---- filtro de superficie para el historial ----
+        st.markdown("---")
+        filtro = st.radio("Historial a mostrar:", ["Todas las superficies", f"Solo {sup_lbl}"],
+                          horizontal=True, key="filtro_hist")
+        surf_f = None if filtro.startswith("Todas") else sup
+
+        # ---- últimos partidos de cada jugador ----
+        st.markdown("#### 📋 Últimos partidos")
+        colp = st.columns(2)
+        for col, jug in [(colp[0], j1), (colp[1], j2)]:
+            with col:
+                st.markdown(f"**{jug}**")
+                up = mo.ultimos_partidos(M, jug, surf_f, n=8)
+                if up.empty:
+                    st.caption("Sin partidos para este filtro.")
+                else:
+                    st.dataframe(up, hide_index=True, width="stretch")
+
+        # ---- head-to-head detallado ----
+        st.markdown("#### 🆚 Enfrentamientos directos (head-to-head)")
+        hv = mo.historial_versus(M, j1, j2, surf_f)
+        if hv.empty:
+            extra = "" if surf_f is None else f" en {sup_lbl}"
+            st.info(f"No hay enfrentamientos directos{extra} entre **{j1}** y **{j2}** en los datos (desde 2000).")
+        else:
+            g1 = int((hv["Ganador"] == j1).sum())
+            g2 = int((hv["Ganador"] == j2).sum())
+            lider = j1 if g1 > g2 else (j2 if g2 > g1 else "empate")
+            st.markdown(f"**{j1} {g1}–{g2} {j2}**  ·  {len(hv)} enfrentamiento{'s' if len(hv) != 1 else ''}"
+                        + (f"  ·  lidera **{lider}**" if lider != "empate" else "  ·  igualados"))
+            st.dataframe(hv, hide_index=True, width="stretch")
 
 # ============================ TAB 2: RANKINGS ============================
 with t2:
