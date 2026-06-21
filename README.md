@@ -8,14 +8,19 @@ ahora para **Hard / Clay / Grass**, con la metodología aplicada en los proyecto
 - Rankings Elo general y **por superficie** (Nadal #1 en tierra, Djokovic #1 en pasto…).
 - Simulador Monte Carlo de un cuadro (4/8/16 jugadores) → P(campeón).
 
-## Datos
-ATP 2000–2024 (72.814 partidos, todas las superficies) desde el mirror
-`sacriusdt/tennis-atp-prediction` del dataset de Jeff Sackmann (el repo original
-`JeffSackmann/tennis_atp` se volvió privado en 2026).
+## Datos (híbrido, ~todas las superficies, 2000 → hoy)
+Fuente en tres capas, todas en formato Sackmann y **solo cuadro principal** (sin Challengers ni qualy):
+1. **Histórico 2000–2024**: mirror `sacriusdt/tennis-atp-prediction` (el repo original `JeffSackmann/tennis_atp` se volvió privado en 2026).
+2. **2025–mar 2026**: mirror activo `ivanposinovec/ATP` (en Git LFS, vía `media.githubusercontent.com`).
+3. **abr 2026 → hoy (en vivo)**: API pública de ESPN (`recolectar_espn.py`), con reconciliación de nombres
+   (normaliza acentos/guiones a la grafía del histórico) y de superficie (clasificador por torneo).
+   ESPN no trae stats de saque (se dejan vacías; no afectan al modelo de resultado) y el ranking se toma
+   del endpoint de rankings de ESPN.
 
 ```bash
-python3 recolectar.py     # baja y cachea data/partidos.csv
-python3 analisis.py       # análisis de variables + validación + métricas
+python3 recolectar.py        # base histórica (capas 1+2) -> data/partidos.csv
+python3 recolectar_espn.py   # añade la capa viva de ESPN hasta hoy (re-ejecutable para actualizar)
+python3 analisis.py          # análisis de variables + validación + métricas
 streamlit run app_tenis.py
 ```
 

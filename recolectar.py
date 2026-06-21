@@ -65,6 +65,9 @@ def descargar():
     full["_r"] = full["round"].map(orden_ronda).fillna(0)
     full = full.sort_values(["fecha", "tourney_name", "_r"]).drop(columns="_r").reset_index(drop=True)
     full = full[full["surface"].isin(["Hard", "Clay", "Grass"])]  # descartar Carpet (extinta) y vacíos
+    # excluir rondas de clasificación: el histórico 2000-2024 es solo cuadro principal, pero el mirror
+    # 2025-2026 trae qualy (Q1/Q2/Q3). Quitarlas mantiene la base homogénea y evita inflar a jugadores recientes.
+    full = full[~full["round"].isin(["Q1", "Q2", "Q3"])]
     return full
 
 

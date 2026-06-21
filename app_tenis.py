@@ -34,9 +34,11 @@ def cargar():
 
 M = cargar()
 activos = mo.jugadores_activos(M)
+ULT = M["df"]["fecha"].max()
 
 st.title("🎾 Predictor de Tenis ATP")
-st.markdown("<p class='mut'>Elo por superficie + validación temporal + Monte Carlo · datos ATP 2000 → mar-2026 (todas las superficies)</p>",
+st.markdown(f"<p class='mut'>Elo por superficie + validación temporal + Monte Carlo · datos ATP 2000 → {ULT.strftime('%d-%b-%Y')} "
+            f"(histórico Sackmann + ESPN en vivo, todas las superficies)</p>",
             unsafe_allow_html=True)
 
 t1, t2, t3, t4 = st.tabs(["🎾 Predecir partido", "📊 Rankings Elo", "🏆 Simulador de torneo", "🎯 El modelo"])
@@ -88,7 +90,7 @@ with t1:
         st.caption(f"Head-to-head histórico (desde 2000): {j1} {h1}–{h2} {j2}")
         st.caption("La probabilidad combina Elo general + Elo de la superficie + edad + ranking ATP (modelo elegido por selección forward).")
         st.caption("⚠️ El **Elo** es una medida propia de fuerza (no existe un Elo oficial) y **no es lo mismo que el ranking ATP**. "
-                   "El 'Ranking ATP' mostrado es el del último partido en los datos (hasta mar-2026), así que puede diferir del oficial de hoy.")
+                   "El 'Ranking ATP' mostrado proviene del ranking actual de ESPN.")
 
 # ============================ TAB 2: RANKINGS ============================
 with t2:
