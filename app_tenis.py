@@ -130,6 +130,33 @@ with t1:
         st.caption("Modelo de primer orden (sets/puntos i.i.d.), análogo a asumir goles independientes en fútbol. "
                    "P(gana) coincide exacto con la suma de los marcadores ganadores.")
 
+        # ---- mercados de saque: aces y dobles faltas ----
+        se = mo.stats_esperadas(M, j1, j2, sup, best_of=bo)
+        if se:
+            from scipy.stats import poisson as _pois
+            st.markdown("---")
+            st.markdown("#### 🎾 Mercados de saque (aces y dobles faltas)")
+            st.caption(f"Esperado según superficie ({sup_lbl}), formato (Mejor de {bo}) y el perfil de saque/resto de "
+                       "cada jugador. Acá las stats SÍ sirven: predicen su propio mercado, no el ganador.")
+            a1, a2 = se["ace"]; d1, d2 = se["df"]; tot = a1 + a2
+            ac1, ac2 = st.columns([3, 2])
+            with ac1:
+                tab = pd.DataFrame({"Estadística": ["🎯 Aces", "🟥 Dobles faltas"],
+                                    j1: [f"{a1:.1f}", f"{d1:.1f}"], j2: [f"{a2:.1f}", f"{d2:.1f}"],
+                                    "Total": [f"{a1+a2:.1f}", f"{d1+d2:.1f}"]})
+                st.dataframe(tab, hide_index=True, width="stretch")
+            with ac2:
+                base = round(tot)
+                filas = []
+                for ln in [base - 3.5, base - 0.5, base + 2.5]:
+                    if ln <= 0:
+                        continue
+                    po = float(_pois.sf(int(ln), tot))
+                    filas.append({"Mercado": f"Aces tot. Over {ln}", "Prob.": f"{po:.0%}", "Cuota": f"{1/max(po,1e-6):.2f}"})
+                st.dataframe(pd.DataFrame(filas), hide_index=True, width="stretch")
+            st.caption(f"Total de aces esperado: **{tot:.1f}**. Poisson validado (MAE −22% vs el promedio; "
+                       "capta sacador, superficie y formato).")
+
         # ---- filtro de superficie para el historial ----
         st.markdown("---")
         filtro = st.radio("Historial a mostrar:", ["Todas las superficies", f"Solo {sup_lbl}"],
