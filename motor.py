@@ -211,6 +211,60 @@ def jugadores_activos(M, desde="2023-01-01", min_partidos=15):
     return [j for j, _ in sorted(js, key=lambda x: -x[1])]
 
 
+def _invertir_set(p_match, bo):
+    """Dado P(ganar el partido), halla P(ganar un set) asumiendo sets i.i.d. (bisección)."""
+    f = lambda p: (p * p * (3 - 2 * p) if bo == 3 else p ** 3 * (10 - 15 * p + 6 * p ** 2)) - p_match
+    lo, hi = 1e-9, 1 - 1e-9
+    for _ in range(64):
+        m = (lo + hi) / 2
+        if f(m) > 0: hi = m
+        else: lo = m
+    return (lo + hi) / 2
+
+
+def distribucion_sets(p_match, bo=3):
+    """Distribución del marcador en sets (desde la perspectiva del jugador con prob p_match).
+    Devuelve (dict marcador->prob, p_set). Análogo a la matriz de marcadores del fútbol."""
+    p = _invertir_set(p_match, bo); q = 1 - p
+    if bo == 3:
+        d = {"2-0": p * p, "2-1": 2 * p * p * q, "1-2": 2 * p * q * q, "0-2": q * q}
+    else:
+        d = {"3-0": p ** 3, "3-1": 3 * p ** 3 * q, "3-2": 6 * p ** 3 * q * q,
+             "2-3": 6 * p * p * q ** 3, "1-3": 3 * p * q ** 3, "0-3": q ** 3}
+    return d, p
+
+
+def _race(p, n):
+    """P(ganar una 'carrera' a n puntos, ganando por 2, con puntos i.i.d. de prob p) — game (n=4) o tiebreak (n=7)."""
+    from math import comb
+    pre = sum(comb(n - 1 + k, k) * p ** n * (1 - p) ** k for k in range(n - 1))
+    deuce = comb(2 * (n - 1), n - 1) * p ** (n - 1) * (1 - p) ** (n - 1)
+    return pre + deuce * p ** 2 / (p ** 2 + (1 - p) ** 2)
+
+
+def _p_set_de_punto(q):
+    """P(ganar un set) a partir de la prob de ganar un punto q (modelo i.i.d. simplificado: game→set con tiebreak)."""
+    from math import comb
+    g = _race(q, 4); t = _race(q, 7)
+    win_6k = sum(comb(5 + k, k) * g ** 6 * (1 - g) ** k for k in range(5))   # 6-0..6-4
+    p55 = comb(10, 5) * g ** 5 * (1 - g) ** 5
+    return win_6k + p55 * g * g + p55 * 2 * g * (1 - g) * t                   # +7-5 +tiebreak
+
+
+def puntos_implicitos(p_match, bo=3):
+    """% de puntos que gana (en promedio) el favorito implícito por su prob de partido.
+    Revela lo fino del margen: un 'favorito 90%' suele ganar solo ~57% de los puntos."""
+    def pm(q):
+        ps = _p_set_de_punto(q)
+        return ps * ps * (3 - 2 * ps) if bo == 3 else ps ** 3 * (10 - 15 * ps + 6 * ps ** 2)
+    lo, hi = 1e-4, 1 - 1e-4
+    for _ in range(64):
+        m = (lo + hi) / 2
+        if pm(m) > p_match: hi = m
+        else: lo = m
+    return (lo + hi) / 2
+
+
 def ranking_elo(M, surface=None, top=30, min_partidos=20):
     """Ranking de jugadores por Elo (overall o de una superficie)."""
     filas = []

@@ -88,6 +88,48 @@ with t1:
         st.caption("⚠️ El **Elo** es una medida propia de fuerza (no existe un Elo oficial) y **no es lo mismo que el ranking ATP**. "
                    "El 'Ranking ATP' mostrado proviene del ranking actual de ESPN.")
 
+        # ---- "No es tan obvio": distribución de sets + % de puntos implícito ----
+        st.markdown("---")
+        st.markdown("#### 🎯 No es tan obvio: el partido en sets")
+        st.caption("Un % de partido alto parece un 'paseo', pero descompuesto en sets rara vez lo es "
+                   "(el equivalente a mirar la matriz de marcadores del fútbol).")
+        bo = 5 if st.radio("Formato", ["Mejor de 3 (ATP normal)", "Mejor de 5 (Grand Slam)"],
+                           horizontal=True, key="bo_fmt").startswith("Mejor de 5") else 3
+        dist, _ = mo.distribucion_sets(p, bo)
+        fav, pf = (j1, p) if p >= 0.5 else (j2, 1 - p)
+
+        def _etq(k):
+            a, b = map(int, k.split("-"))
+            return f"{j1 if a > b else j2} {max(a, b)}-{min(a, b)}"
+
+        mx = max(dist.values())
+        barras = ""
+        for k, v in sorted(dist.items(), key=lambda kv: -kv[1]):
+            barras += (f"<div style='display:flex;align-items:center;gap:8px;margin:3px 0'>"
+                       f"<span style='width:180px;font-size:.85rem'>{_etq(k)}</span>"
+                       f"<div style='flex:1;background:rgba(255,255,255,.06);border-radius:5px'>"
+                       f"<div style='width:{v/mx*100:.0f}%;background:#ccff00;height:15px;border-radius:5px'></div></div>"
+                       f"<span style='width:42px;text-align:right;font-size:.85rem'>{v:.0%}</span></div>")
+        cset1, cset2 = st.columns([3, 2])
+        with cset1:
+            st.markdown(barras, unsafe_allow_html=True)
+        with cset2:
+            n = 2 if bo == 3 else 3
+            corridos = dist[f"{n}-0"] if fav == j1 else dist[f"0-{n}"]
+            decisivo = (dist.get("2-1", 0) + dist.get("1-2", 0)) if bo == 3 else (dist.get("3-2", 0) + dist.get("2-3", 0))
+            q = mo.puntos_implicitos(pf, bo)
+            st.markdown(
+                f"<div class='bloque'><p class='mut'>El favorito (<b>{fav}</b>, {pf:.0%}) gana…</p>"
+                f"<p style='margin:.1rem 0'>en sets corridos: <span class='gana'>{corridos:.0%}</span></p>"
+                f"<p class='mut'>Se va a <b>set decisivo</b>: <b>{decisivo:.0%}</b></p>"
+                f"<hr style='border-color:rgba(255,255,255,.12);margin:.5rem 0'>"
+                f"<p class='mut'>% de <b>puntos</b> del favorito:</p>"
+                f"<p style='font-size:1.7rem;margin:.1rem 0' class='gana'>{q:.1%}</p>"
+                f"<p class='mut'>Ese {pf:.0%} del partido sale de ganar apenas <b>{q:.0%}</b> de los puntos — "
+                f"el tenis amplifica ventajas chicas.</p></div>", unsafe_allow_html=True)
+        st.caption("Modelo de primer orden (sets/puntos i.i.d.), análogo a asumir goles independientes en fútbol. "
+                   "P(gana) coincide exacto con la suma de los marcadores ganadores.")
+
         # ---- filtro de superficie para el historial ----
         st.markdown("---")
         filtro = st.radio("Historial a mostrar:", ["Todas las superficies", f"Solo {sup_lbl}"],
