@@ -154,8 +154,22 @@ with t1:
                     po = float(_pois.sf(int(ln), tot))
                     filas.append({"Mercado": f"Aces tot. Over {ln}", "Prob.": f"{po:.0%}", "Cuota": f"{1/max(po,1e-6):.2f}"})
                 st.dataframe(pd.DataFrame(filas), hide_index=True, width="stretch")
-            st.caption(f"Total de aces esperado: **{tot:.1f}**. Poisson validado (MAE −22% vs el promedio; "
-                       "capta sacador, superficie y formato).")
+
+            # Over/Under de aces POR JUGADOR
+            st.markdown("**Over/Under de aces por jugador**")
+            filas_pj = []
+            for nom, lam in [(j1, a1), (j2, a2)]:
+                bj = round(lam)
+                for ln in [bj - 1.5, bj + 0.5, bj + 2.5]:
+                    if ln <= 0:
+                        continue
+                    po = float(_pois.sf(int(ln), lam))
+                    filas_pj.append({"Jugador": nom, "Mercado": f"Over {ln} aces",
+                                     "Prob.": f"{po:.0%}", "Cuota": f"{1/max(po,1e-6):.2f}"})
+            st.dataframe(pd.DataFrame(filas_pj), hide_index=True, width="stretch")
+            st.caption(f"Aces esperados — {j1}: **{a1:.1f}** · {j2}: **{a2:.1f}** · total **{tot:.1f}**. "
+                       "Poisson validado (MAE total −24% vs el promedio). Sirve en matchups extremos; "
+                       "cerca de una línea normal es ruido.")
 
         # ---- filtro de superficie para el historial ----
         st.markdown("---")
