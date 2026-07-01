@@ -59,7 +59,7 @@ def nivel(nombre):
     return "A"
 
 
-def ronda(nombre):
+def ronda(nombre, slam=False):
     n = (nombre or "").lower()
     if "qualif" in n:
         return None  # se descarta (el histórico es solo cuadro principal)
@@ -77,7 +77,23 @@ def ronda(nombre):
         return "R32"
     if "round of 16" in n or "4th" in n:
         return "R16"
-    return "R32"  # genérico para "Round 1/2/3"
+    # Slams: ESPN nombra "Round 1..4" (cuadro de 128) -> mapear al tamaño real
+    if slam:
+        for k, r in (("round 1", "R128"), ("round 2", "R64"), ("round 3", "R32"), ("round 4", "R16")):
+            if k in n:
+                return r
+    return "R32"  # genérico para "Round 1/2/3" en torneos chicos (el modelo no usa la ronda)
+
+
+# Grafías de ESPN que NO coinciden con el histórico Sackmann ni se salvan con norm()
+# (transliteraciones distintas). Sin esto el jugador queda PARTIDO en dos identidades:
+# Elo desconectado y "últimos partidos" repartidos entre dos nombres.
+ALIAS = {
+    "alexandr shevchenko": "Alexander Shevchenko",
+    "aleksandr shevchenko": "Alexander Shevchenko",
+    "abdullah shelbayh": "Abedallah Shelbayh",
+    "soonwoo kwon": "Soon Woo Kwon",
+}
 
 
 def rankings_actuales():
@@ -94,7 +110,12 @@ def main():
     base = pd.read_csv(f"{DATA}/partidos.csv", parse_dates=["fecha"])
     cols = list(base.columns)
     corte = base["fecha"].max()
-    print(f"Histórico hasta {corte.date()}. Trayendo ESPN desde el día siguiente hasta hoy...")
+    # OJO: re-barrer desde ANTES del corte. Si la corrida anterior fue a mitad de un torneo,
+    # los partidos de ese mismo día que aún no terminaban (y las rondas siguientes con fecha
+    # igual al corte) se perderían para siempre con un corte estricto. El dedup por clave
+    # (fecha, torneo, ronda, ganador, perdedor) evita duplicar lo ya guardado.
+    desde = corte - timedelta(days=7)
+    print(f"Histórico hasta {corte.date()}. Re-barriendo ESPN desde {desde.date()} hasta hoy...")
 
     # mapas de reconciliación a partir del histórico
     canon = {}                       # nombre normalizado -> nombre canónico (Sackmann)
@@ -114,6 +135,8 @@ def main():
 
     def resolver(nombre_espn):
         nn = norm(nombre_espn)
+        if nn in ALIAS:
+            return ALIAS[nn]                      # transliteración conocida -> nombre del histórico
         if nn in canon:
             return canon[nn]                      # jugador conocido -> nombre del histórico (continuidad Elo)
         # jugador nuevo: nombre limpio estilo Sackmann (sin guiones) y registrar
@@ -130,7 +153,7 @@ def main():
     # barrer fechas (cada 3 días captura todos los torneos; un evento trae su cuadro completo)
     filas = []
     vistos = set()
-    d = (corte + timedelta(days=1)).date()
+    d = desde.date()
     hoy = datetime.now().date()
     while d <= hoy:
         url = f"{BASE}/scoreboard?dates={d.strftime('%Y%m%d')}"
@@ -147,7 +170,7 @@ def main():
                 for c in g.get("competitions", []):
                     if not c.get("status", {}).get("type", {}).get("completed"):
                         continue
-                    rd = ronda(c.get("round", {}).get("displayName", ""))
+                    rd = ronda(c.get("round", {}).get("displayName", ""), slam=(lvl == "G"))
                     if rd is None:
                         continue
                     comp = c.get("competitors", [])
@@ -161,8 +184,8 @@ def main():
                         fecha = pd.Timestamp(c["date"]).tz_localize(None).normalize()
                     except Exception:
                         continue
-                    if fecha <= corte:
-                        continue
+                    if fecha < pd.Timestamp(desde):
+                        continue   # fuera de la ventana; lo ya guardado lo protege el dedup por clave
                     w = resolver(gan[0]["athlete"]["displayName"])
                     l = resolver(per[0]["athlete"]["displayName"])
                     clave = (fecha, tname, rd, w, l)
