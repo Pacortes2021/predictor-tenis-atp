@@ -179,6 +179,12 @@ with t1:
 
         # ---- últimos partidos de cada jugador ----
         st.markdown("#### 📋 Últimos partidos")
+        st.caption("⚠️ **Alcance de los datos:** solo cuadro principal del circuito ATP (igual que el "
+                   "histórico). NO incluye fases de clasificación (qualy), Challengers, Copa Davis, "
+                   "United Cup ni JJOO — la API pública de ESPN no expone esas competiciones. Si un "
+                   "jugador viene de la qualy o jugó por equipos, esos partidos no aparecen aquí y su "
+                   "último partido puede verse más antiguo de lo real. El marcador se muestra siempre "
+                   "desde el punto de vista del ganador.")
         colp = st.columns(2)
         for col, jug in [(colp[0], j1), (colp[1], j2)]:
             with col:
