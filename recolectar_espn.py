@@ -6,6 +6,7 @@ en el partido: el ranking se toma del endpoint de rankings de ESPN y la edad se 
 histórico. Re-ejecutable: solo añade partidos posteriores al máximo ya guardado.
 """
 import io
+import os
 import time
 import unicodedata
 from datetime import datetime, timedelta
@@ -14,7 +15,8 @@ import numpy as np
 import pandas as pd
 import requests
 
-DATA = "/Users/pabloignaciocortesvielma/Downloads/Tenis_Predictor/data"
+# ruta relativa al proyecto (portable: funciona igual en local y en Streamlit Cloud)
+DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 H = {"User-Agent": "Mozilla/5.0"}
 BASE = "https://site.api.espn.com/apis/site/v2/sports/tennis/atp"
 
@@ -208,7 +210,8 @@ def main():
         time.sleep(0.05)
 
     if not filas:
-        print("No hay partidos nuevos en ESPN."); return
+        print("No hay partidos nuevos en ESPN.")
+        return {"nuevos": 0, "hasta": corte}
     nuevo = pd.DataFrame(filas)
     for c in cols:
         if c not in nuevo.columns:
@@ -235,6 +238,8 @@ def main():
     nuevos_jug = sum(1 for n in set(nuevo.winner_name) | set(nuevo.loser_name)
                      if n not in set(base.winner_name) | set(base.loser_name))
     print(f"  jugadores que no estaban en el histórico: {nuevos_jug}")
+    # netos = los que sobrevivieron al dedup (el re-barrido vuelve a traer lo ya guardado)
+    return {"nuevos": len(full) - len(base), "hasta": full.fecha.max()}
 
 
 if __name__ == "__main__":

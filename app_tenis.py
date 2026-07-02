@@ -37,9 +37,29 @@ activos = mo.jugadores_activos(M)
 ULT = M["df"]["fecha"].max()
 
 st.title("🎾 Predictor de Tenis ATP")
-st.markdown(f"<p class='mut'>Elo por superficie + validación temporal + Monte Carlo · datos ATP 2000 → {ULT.strftime('%d-%b-%Y')} "
-            f"(histórico Sackmann + ESPN en vivo, todas las superficies)</p>",
-            unsafe_allow_html=True)
+ch1, ch2 = st.columns([4, 1])
+with ch1:
+    st.markdown(f"<p class='mut'>Elo por superficie + validación temporal + Monte Carlo · datos ATP 2000 → {ULT.strftime('%d-%b-%Y')} "
+                f"(histórico Sackmann + ESPN en vivo, todas las superficies)</p>",
+                unsafe_allow_html=True)
+with ch2:
+    if st.button("🔄 Actualizar datos", help="Trae los partidos nuevos desde ESPN, recalcula el Elo "
+                 "y re-entrena el modelo con los datos al día (~1 min)."):
+        with st.spinner("Trayendo partidos nuevos de ESPN…"):
+            try:
+                import recolectar_espn
+                r = recolectar_espn.main()
+                st.session_state["msg_update"] = (
+                    f"✅ {r['nuevos']} partido(s) nuevo(s). Datos hasta {pd.Timestamp(r['hasta']).strftime('%d-%b-%Y')}. "
+                    "Elo y modelo recalculados." if r["nuevos"] else
+                    f"Sin partidos nuevos en ESPN (datos ya al día: {pd.Timestamp(r['hasta']).strftime('%d-%b-%Y')}).")
+                if r["nuevos"]:
+                    cargar.clear()      # invalida el motor cacheado -> el rerun re-entrena con el CSV nuevo
+            except Exception as e:
+                st.session_state["msg_update"] = f"⚠️ No se pudo actualizar (¿sin conexión a ESPN?): {e}"
+        st.rerun()
+if "msg_update" in st.session_state:
+    st.info(st.session_state.pop("msg_update"))
 
 t1, t2, t3, t4 = st.tabs(["🎾 Predecir partido", "📊 Rankings Elo", "🏆 Simulador de torneo", "🎯 El modelo"])
 
